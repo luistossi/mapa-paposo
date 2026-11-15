@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="description" content="Mapa interactivo de lugares significativos del pueblo chango en Paposo y sus alrededores, comuna de Taltal. Recurso pedagógico digital para 1° a 6° básico.">
+<meta name="theme-color" content="#6b2326">
+<meta property="og:title" content="Recorrido por Paposo">
+<meta property="og:description" content="Lugares significativos del pueblo chango · Comuna de Taltal, Región de Antofagasta">
+<meta property="og:locale" content="es_CL">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2333a6c0'/%3E%3Cpath d='M18 0h14v32H14c3-6 6-10 4-16S15 6 18 0z' fill='%23f1c19d'/%3E%3Ccircle cx='17' cy='18' r='4' fill='%23d9a441' stroke='%23fff' stroke-width='1.5'/%3E%3C/svg%3E">
+<title>Recorrido por Paposo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: mapa a escala real (UTM 19S, km) con zoom; escritorio = mapa + ficha lateral; tablet y teléfono = mapa arriba, ficha abajo y tarjeta flotante */
+:root {
+  --ocean-1: #e3f4f1;
+  --ocean-2: #a8dde2;
+  --ocean-3: #69c4d3;
+  --ocean-4: #33a6c0;
+  --sand: #f6e8d7;
+  --peach: #f1c19d;
+  --maroon: #6b2326;
+  --maroon-deep: #4f181b;
+  --gold: #d9a441;
+  --sage: #557f52;
+  --pin-blue: #3a76b3;
+  --ink: #1f2a30;
+  --ink-soft: #55615f;
+  --paper: #fbf5ec;
+  --line: #e2d3c0;
+  --ui-grey: rgba(66, 68, 70, .62);
+  --page: #23282b;
+  --font-display: "Oswald", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --map-h: clamp(520px, calc(100vh - 150px), 940px);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: hidden; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-block: 16px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 14px;
+}
+header.top {
+  background: linear-gradient(90deg, var(--peach), #f6d4b8);
+  border-radius: 14px;
+  padding: 12px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand { min-width: 0; }
+.brand h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  margin: 0;
+  line-height: 1.1;
+  color: var(--maroon-deep);
+  text-wrap: balance;
+}
+.brand p { margin: 2px 0 0; color: var(--ink-soft); font-size: .92rem; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: .02em;
+  border: 2px solid var(--maroon);
+  color: var(--maroon);
+  background: transparent;
+  border-radius: 999px;
+  padding: 6px 16px;
+  min-height: 40px;
+  cursor: pointer;
+}
+.btn.solid { background: var(--maroon); color: #fff; }
+.btn:hover { background: var(--maroon-deep); border-color: var(--maroon-deep); color: #fff; }
+:is(.btn, .chip, .round, .lvl, summary):focus-visible, .pin:focus-visible .mk { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 14px; align-items: start; }
+
+/* Mapa */
+.map-card {
+  position: relative;
+  height: var(--map-h);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  background: var(--ocean-4);
+  user-select: none;
+  -webkit-user-select: none;
+}
+#map { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#map.dragging { cursor: grabbing; }
+.pin { cursor: pointer; outline: none; }
+.label {
+  font-family: var(--font-display); font-weight: 500; font-size: 14px; fill: var(--ink);
+  paint-order: stroke; stroke: rgba(255,255,255,.7); stroke-width: 3px; stroke-linejoin: round;
+}
+.label.hide { visibility: hidden; }
+.pin:hover .label, .pin.on .label { fill: var(--maroon); font-weight: 700; }
+.mk { transition: transform .15s; transform-box: fill-box; transform-origin: center; }
+.pin:hover .mk, .pin.on .mk { transform: scale(1.35); }
+.halo { opacity: 0; fill: none; stroke: var(--maroon); stroke-width: 2.5; }
+.pin.on .halo { opacity: 1; }
+.pulse { fill: none; stroke: var(--gold); stroke-width: 2; animation: pulse 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(2.6); opacity: 0; } }
+.deco { font-family: var(--font-display); font-weight: 500; letter-spacing: .3em; font-size: 12px; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; opacity: .5; } .mk { transition: none; } }
+.site .label { font-size: 12.5px; fill: var(--maroon-deep); }
+#siteLayer.off { display: none; }
+.legend .toggle { border-top: 1px solid rgba(255,255,255,.25); padding-top: 8px; margin-top: 2px; }
+.legend label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.legend input { width: 18px; height: 18px; accent-color: var(--gold); margin: 0; }
+.tag.leaf { background: #dfe9cf; color: #3d5a1f; }
+
+.legend {
+  position: absolute; left: 12px; top: 12px;
+  max-width: calc(100% - 84px);
+  background: var(--maroon);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,.25);
+}
+.legend summary {
+  font-family: var(--font-display); font-weight: 700; font-size: 1.2rem;
+  padding: 6px 14px; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px;
+}
+.legend summary::-webkit-details-marker { display: none; }
+.legend summary::after { content: "+"; font-weight: 400; opacity: .8; }
+.legend[open] summary::after { content: "–"; }
+.legend ul { list-style: none; margin: 0; padding: 0 14px 12px; display: grid; gap: 5px; font-size: .84rem; }
+.legend li { display: flex; align-items: center; gap: 8px; }
+.legend li svg { flex: none; }
+
+.controls { position: absolute; right: 12px; top: 12px; display: grid; gap: 8px; }
+.steps { position: absolute; right: 12px; bottom: 12px; display: grid; gap: 8px; }
+.round {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 0; background: var(--ui-grey); color: #fff;
+  display: grid; place-items: center; cursor: pointer;
+}
+.round:hover { background: rgba(40,42,44,.85); }
+
+.scale {
+  position: absolute; left: 12px; bottom: 12px;
+  display: flex; align-items: flex-end; gap: 10px;
+  background: rgba(251,245,236,.86); padding: 6px 10px 6px 8px; border-radius: 4px;
+  font-family: var(--font-display); font-size: .8rem; color: var(--ink);
+  pointer-events: none;
+}
+.scale .bar { height: 7px; border: 1.5px solid var(--ink); border-top: 0; }
+.scale .n { display: grid; justify-items: center; line-height: 1; font-weight: 600; }
+
+.peek {
+  display: none;
+  position: absolute; left: 12px; right: 68px; bottom: 54px;
+  background: var(--paper); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.3);
+  padding: 10px 12px; gap: 10px; align-items: center; justify-content: space-between;
+}
+.peek b { font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; color: var(--maroon-deep); line-height: 1.15; min-width: 0; }
+.peek small { display: block; font-family: var(--font-body); font-weight: 400; color: var(--ink-soft); font-size: .78rem; }
+.peek .btn { flex: none; padding: 4px 12px; min-height: 36px; font-size: .92rem; }
+
+/* Ficha */
+.panel { background: var(--paper); border-radius: 4px; overflow: hidden auto; box-shadow: 0 10px 30px rgba(0,0,0,.35); min-width: 0; max-height: var(--map-h); scroll-margin-top: 12px; }
+.panel-head { background: var(--maroon); color: #fff; padding: 16px 20px 14px; display: grid; gap: 4px; }
+.eyebrow { font-family: var(--font-display); font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; opacity: .88; display: flex; gap: 6px 8px; align-items: center; flex-wrap: wrap; }
+.panel-head h2 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.5rem, 4vw, 1.9rem); line-height: 1.1; margin: 0; text-wrap: balance; }
+.panel-body { padding: 18px 20px 20px; display: grid; gap: 16px; }
+.panel-body h3 { font-family: var(--font-display); font-weight: 600; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; color: var(--maroon); margin: 0 0 4px; }
+.panel-body p { margin: 0 0 8px; }
+.panel-body p:last-child { margin-bottom: 0; }
+.photo {
+  aspect-ratio: 16 / 9; max-width: 100%;
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, #efe2d0 0 12px, #e8d8c3 12px 24px);
+  display: grid; place-items: center; text-align: center;
+  color: var(--ink-soft); font-size: .88rem; padding: 12px;
+  border: 1px dashed #cdb89c;
+}
+.photo strong { display: block; font-family: var(--font-display); font-weight: 500; letter-spacing: .04em; color: var(--maroon); font-size: 1rem; }
+.coords { font-family: var(--font-display); font-size: .85rem; color: var(--ink-soft); letter-spacing: .03em; font-variant-numeric: tabular-nums; }
+.src a { color: var(--pin-blue); word-break: break-all; font-size: .9rem; }
+.tag { display: inline-block; font-family: var(--font-display); font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; }
+.tag.pend { background: #f5dfb3; color: #6d4a07; }
+.tag.ok { background: #d9ead3; color: #2f5a2c; }
+.tag.approx { background: rgba(255,255,255,.18); color: #fff; }
+.panel-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); padding-top: 14px; }
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.chip {
+  text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 4px;
+  padding: 10px 12px; cursor: pointer; font: inherit; color: var(--ink); display: grid; gap: 4px; align-content: start; min-width: 0;
+}
+.chip:hover { border-color: var(--maroon); }
+.chip b { font-family: var(--font-display); font-weight: 500; font-size: 1.02rem; line-height: 1.2; }
+.chip .eyebrow { opacity: 1; color: var(--ink-soft); font-size: .7rem; }
+.tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.tool { background: #fff; border: 1px solid var(--line); border-radius: 4px; padding: 8px; text-align: center; display: grid; gap: 6px; }
+.tool .photo { aspect-ratio: 1; padding: 4px; font-size: .7rem; }
+.tool b { font-family: var(--font-display); font-weight: 500; }
+ul.plain { margin: 0; padding-left: 20px; }
+
+/* Guía docente */
+.guide { background: var(--paper); border-radius: 4px; padding: 20px; display: grid; gap: 14px; scroll-margin-top: 12px; }
+.guide h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; color: var(--maroon-deep); margin: 0; }
+.guide .meta { color: var(--ink-soft); margin: 0; max-width: 70ch; }
+.levels { display: flex; flex-wrap: wrap; gap: 6px; }
+.lvl { font-family: var(--font-display); font-size: 1rem; border: 2px solid var(--maroon); background: transparent; color: var(--maroon); border-radius: 4px; padding: 4px 12px; min-height: 40px; cursor: pointer; }
+.lvl[aria-pressed="true"] { background: var(--maroon); color: #fff; }
+.oas { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; max-width: 75ch; }
+.oas li { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 10px; }
+.oas b { font-family: var(--font-display); color: var(--maroon); font-weight: 600; }
+.note { font-size: .8rem; color: #b9b2a8; text-align: center; margin: 0; text-wrap: balance; }
+
+/* Tablet y teléfono */
+@media (max-width: 1023px) {
+  :root { --map-h: clamp(420px, 70vh, 780px); }
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .panel { max-height: none; }
+  .peek.show { display: flex; }
+}
+@media (max-width: 560px) {
+  :root { --map-h: clamp(400px, 72vh, 700px); }
+  header.top { padding: 10px 14px; border-radius: 10px; }
+  .brand p { font-size: .82rem; }
+  .top-actions { width: 100%; }
+  .top-actions .btn { flex: 1; }
+  .label { font-size: 13px; }
+  .round { width: 40px; height: 40px; }
+  .panel-head, .panel-body { padding-left: 16px; padding-right: 16px; }
+  .guide { padding: 16px; }
+}
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Recorrido por Paposo</h1>
+      <p>Lugares significativos del pueblo chango · Comuna de Taltal, Región de Antofagasta</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn solid" id="start">Iniciar recorrido</button>
+      <button class="btn" id="guideBtn" aria-expanded="false" aria-controls="guide">Guía docente</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="map-card" id="mapCard">
+      <svg id="map" role="application" aria-label="Mapa de la costa entre Antofagasta y Taltal. Arrastra para mover, usa los botones para acercar."></svg>
+
+      <details class="legend" id="legend">
+        <summary>Simbología</summary>
+        <ul>
+          <li><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="6.5" fill="#fff" stroke="#3a76b3" stroke-width="1.6"/><circle r="3" fill="#3a76b3"/></svg>Caleta</li>
+          <li><svg width="18" height="18" viewBox="-9 -9 18 18"><rect x="-5" y="-5" width="10" height="10" transform="rotate(45)" fill="#f1c19d" stroke="#fff" stroke-width="1.6"/></svg>Sitio arqueológico</li>
+          <li><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="6" fill="#7fb07a" stroke="#fff" stroke-width="1.6"/></svg>Patrimonio natural</li>
+          <li><svg width="18" height="18" viewBox="-9 -9 18 18"><circle r="7" fill="#d9a441" stroke="#fff" stroke-width="1.8"/></svg>Paposo (temas)</li>
+          <li><svg width="18" height="18" viewBox="-10 -10 20 20"><path d="M0-8 2.4-2.5 8.5-2.5 3.6 1.4 5.4 7.6 0 4 -5.4 7.6 -3.6 1.4 -8.5-2.5 -2.4-2.5Z" fill="none" stroke="#fff" stroke-width="1.5"/></svg>Ciudad</li>
+          <li><svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 9h16" stroke="#fff" stroke-width="1.6" stroke-dasharray="3 3"/></svg>Límite histórico</li>
+          <li><svg width="18" height="18" viewBox="-9 -9 18 18"><path d="M0 -6 6 5 -6 5Z" fill="#c2405e" stroke="#fff" stroke-width="1.4"/></svg>Sitio Comunidad Loreto</li>
+          <li><svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 9h16" stroke="#b5d36a" stroke-width="3" stroke-dasharray="1 3" stroke-linecap="round"/></svg>Ruta recorrido de orilla</li>
+          <li><svg width="18" height="18" viewBox="-9 -9 18 18"><path d="M-5 5 C-5 -3 1 -6 6 -6 C6 0 3 5 -5 5Z M-5 5 2 -2" fill="#7fb07a" stroke="#fff" stroke-width="1.2"/></svg>Hierbas medicinales</li>
+          <li class="toggle"><label><input type="checkbox" id="siteToggle" checked>Mostrar capa Comunidad Loreto</label></li>
+        </ul>
+      </details>
+
+      <div class="controls">
+        <button class="round" id="zoomIn" aria-label="Acercar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="round" id="zoomOut" aria-label="Alejar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+        <button class="round" id="homeBtn" aria-label="Ver toda la costa y volver a la introducción"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M6 10v10h12V10"/></svg></button>
+      </div>
+      <div class="steps">
+        <button class="round" id="prevBtn" aria-label="Lugar anterior (más al norte)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        <button class="round" id="nextBtn" aria-label="Lugar siguiente (más al sur)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg></button>
+      </div>
+
+      <div class="scale" aria-hidden="true">
+        <svg width="18" height="26" viewBox="0 0 18 26"><text x="9" y="9" text-anchor="middle" font-family="Oswald, sans-serif" font-size="10" font-weight="700" fill="#1f2a30">N</text><path d="M9 11 14 25 9 21 4 25Z" fill="#1f2a30"/></svg>
+        <div><div class="n"><span id="scaleTxt">10 km</span></div><div class="bar" id="scaleBar" style="width:80px"></div></div>
+      </div>
+
+      <div class="peek" id="peek" aria-live="polite">
+        <b id="peekName"></b>
+        <button class="btn solid" id="peekBtn">Leer ficha</button>
+      </div>
+    </div>
+
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <section class="guide" id="guide" hidden>
+    <h2>Guía docente</h2>
+    <p class="meta">Asignatura Lengua y Cultura de los Pueblos Originarios Ancestrales (Mineduc, 2021) · Eje: Territorio, territorialidad, identidad y memoria histórica de los pueblos originarios · Articulación con Historia, Geografía y Ciencias Sociales.</p>
+    <p class="meta"><b>Meta:</b> reconocer lugares significativos y comprender su relación con la historia y la identidad cultural changa. <b>Indicador:</b> identifican lugares, describen sus características y explican su importancia cultural, según el nivel.</p>
+    <div class="levels" role="group" aria-label="Nivel"></div>
+    <ul class="oas" id="oas"></ul>
+  </section>
+
+  <p class="note">Versión preliminar · mapa a escala, proyección UTM 19S · costa: Natural Earth y OpenStreetMap · referencia: mapas de la Comunidad y Corporación Indígena Loreto · textos del guion del recurso</p>
+</div>
+
+<script>
+// Línea de costa (lon, lat), de sur a norte
+const COAST_RAW=[[-70.5850,-25.4936],[-70.5511,-25.4724],[-70.5385,-25.4682],[-70.5309,-25.4568],[-70.5214,-25.4033],[-70.5137,-25.3863],[-70.4761,-25.3907],[-70.4764,-25.3863],[-70.4649,-25.3824],[-70.4506,-25.3745],[-70.4585,-25.3736],[-70.4543,-25.3632],[-70.4494,-25.3552],[-70.4448,-25.3449],[-70.4474,-25.3364],[-70.4507,-25.3265],[-70.4466,-25.3331],[-70.4529,-25.3180],[-70.4539,-25.2972],[-70.4508,-25.3063],[-70.4502,-25.2833],[-70.4417,-25.2628],[-70.4392,-25.2765],[-70.4344,-25.2361],[-70.4351,-25.1933],[-70.4389,-25.2022],[-70.4370,-25.1935],[-70.4569,-25.1611],[-70.4491,-25.1529],[-70.4727,-25.1193],[-70.4891,-25.1104],[-70.4973,-25.1087],[-70.4972,-25.1043],[-70.5006,-25.0955],[-70.4997,-25.0846],[-70.4954,-25.0690],[-70.4849,-25.0591],[-70.4945,-25.0610],[-70.4814,-25.0443],[-70.4886,-25.0395],[-70.4770,-25.0203],[-70.4687,-25.0001],[-70.4810,-24.9612],[-70.4727,-24.9753],[-70.5162,-24.9292],[-70.5241,-24.9183],[-70.5210,-24.9190],[-70.5292,-24.8983],[-70.5279,-24.8962],[-70.5317,-24.8731],[-70.5426,-24.8419],[-70.5359,-24.8492],[-70.5498,-24.8325],[-70.5476,-24.7883],[-70.5458,-24.8104],[-70.5559,-24.8108],[-70.5559,-24.7659],[-70.5569,-24.7531],[-70.5591,-24.7563],[-70.5709,-24.7390],[-70.5731,-24.7372],[-70.5782,-24.7211],[-70.5764,-24.7317],[-70.5623,-24.6428],[-70.5720,-24.6530],[-70.5764,-24.6533],[-70.5536,-24.6055],[-70.5597,-24.6198],[-70.5548,-24.6059],[-70.5565,-24.5951],[-70.5605,-24.5844],[-70.5654,-24.5617],[-70.5716,-24.5538],[-70.5772,-24.5497],[-70.5783,-24.5468],[-70.5826,-24.5372],[-70.5828,-24.5248],[-70.5682,-24.5262],[-70.5795,-24.5175],[-70.5672,-24.5142],[-70.5742,-24.5114],[-70.5603,-24.5035],[-70.5689,-24.5024],[-70.5611,-24.4818],[-70.5534,-24.4519],[-70.5539,-24.4495],[-70.5419,-24.4152],[-70.5491,-24.3857],[-70.5498,-24.3798],[-70.5557,-24.3732],[-70.5549,-24.3710],[-70.5559,-24.3652],[-70.5537,-24.3648],[-70.5487,-24.3605],[-70.5437,-24.3552],[-70.5416,-24.3515],[-70.5449,-24.3415],[-70.5472,-24.3321],[-70.5477,-24.3273],[-70.5393,-24.3184],[-70.5329,-24.3057],[-70.5346,-24.2922],[-70.5307,-24.2788],[-70.5343,-24.2610],[-70.5310,-24.2456],[-70.5306,-24.2447],[-70.5137,-24.2145],[-70.5197,-24.2013],[-70.5176,-24.1895],[-70.5061,-24.1674],[-70.5145,-24.1458],[-70.5196,-24.1238],[-70.5094,-24.1222],[-70.5040,-24.1148],[-70.5003,-24.0974],[-70.5023,-24.0676],[-70.5084,-24.0377],[-70.5264,-23.9963],[-70.5198,-23.9653],[-70.5006,-23.9127]];
+// Al sur de la bahía de Taltal la costa sube de forma continua: se ordena por latitud y se quitan nodos de bahías que caen en el agua
+const DROP = new Set(["-70.5682,-24.5262", "-70.5672,-24.5142", "-70.5603,-24.5035"]);
+const COAST = COAST_RAW.filter(p => p[1] < -25.36)
+  .concat(COAST_RAW.filter(p => p[1] >= -25.36 && !DROP.has(p.join(","))).sort((a, b) => a[1] - b[1]));
+
+// Proyección UTM zona 19S (WGS84) → km
+function utm(lon, lat) {
+  const a = 6378137, f = 1 / 298.257223563, k0 = 0.9996, e2 = f * (2 - f), ep2 = e2 / (1 - e2);
+  const φ = lat * Math.PI / 180, dλ = (lon + 69) * Math.PI / 180;
+  const s = Math.sin(φ), c = Math.cos(φ), t = Math.tan(φ);
+  const N = a / Math.sqrt(1 - e2 * s * s), T = t * t, C = ep2 * c * c, A = c * dλ;
+  const M = a * ((1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * φ - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * φ)
+    + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * φ) - (35 * e2 ** 3 / 3072) * Math.sin(6 * φ));
+  const E = k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T * T + 72 * C - 58 * ep2) * A ** 5 / 120) + 500000;
+  const Nn = k0 * (M + N * t * (A * A / 2 + (5 - T + 9 * C + 4 * C * C) * A ** 4 / 24 + (61 - 58 * T + T * T + 600 * C - 330 * ep2) * A ** 6 / 720)) + 1e7;
+  return { E, N: Nn, x: E / 1000, y: (7400000 - Nn) / 1000 };
+}
+
+const PLACES = [
+  { id: "cobre", name: "Caleta El Cobre", cat: "caleta", ll: [-70.5232, -24.2410], side: "r",
+    ubic: "Al norte de Caleta Blanco Encalada y del poblado de Paposo, a orillas del océano Pacífico.",
+    relato: ["Ubicada en el árido y fascinante norte de Chile, en la comuna de Taltal, se encuentra Caleta El Cobre. Un rincón costero de la Región de Antofagasta, bañado por las frías aguas del Océano Pacífico, se sitúa justo al norte del poblado de Paposo, donde el desierto se encuentra con el mar.",
+      "Este sector forma parte del ancestral territorio habitado por el pueblo Chango. Durante siglos, sus comunidades han recorrido estas costas, manteniendo viva la tradición de la pesca y la recolección, en una relación profunda con los recursos que ofrece el océano."],
+    fuente: "https://www.youtube.com/watch?v=XfLGn2FcsNQ", media: "Video (YouTube)" },
+  { id: "blanco", name: "Caleta Blanco Encalada", cat: "caleta", ll: [-70.5486, -24.3704], side: "r",
+    ubic: "Entre Caleta El Cobre, al norte, y el poblado de Paposo, al sur.",
+    relato: ["En la costa de la comuna de Taltal se encuentra Caleta Blanco Encalada, un pequeño sector costero entre Caleta El Cobre y el poblado de Paposo. Desde tiempos antiguos, este territorio ha formado parte de los espacios habitados por el pueblo chango, cuyas comunidades desarrollaron una estrecha relación con el mar.",
+      "A través de la pesca, la recolección de mariscos y el aprovechamiento de los recursos marinos, sus habitantes construyeron modos de vida profundamente vinculados con el entorno costero. Así, Caleta Blanco Encalada conserva la memoria de la presencia changa y de su histórica relación con el océano Pacífico."],
+    fuente: "https://chilesorprendente.blogspot.com/2010/05/caleta-blanco-encalada-antofagasta.html", media: "Fotografía" },
+  { id: "migueldiaz", name: "Alero Miguel Díaz", cat: "arq", ll: [-70.5660, -24.5700], side: "l", approx: true,
+    ubic: "En la costa, en un refugio natural formado por rocas. Es el punto más al norte del recorrido de orilla de la Comunidad Loreto.",
+    relato: ["En la costa de la Región de Antofagasta se encuentra el Alero Miguel Díaz, un refugio natural entre las rocas. Este lugar conserva evidencias de antiguos grupos humanos, como pinturas rupestres, restos de conchas y herramientas de piedra.",
+      "Estos hallazgos permiten conocer las formas de vida de quienes habitaron el litoral. Su historia se relaciona con el territorio ancestral del pueblo chango, cuyos habitantes desarrollaron una estrecha conexión con el mar mediante la pesca y la recolección de mariscos."],
+    fuente: "https://www.researchgate.net/figure/Figura-3-Fotografias-de-los-aleros-litorales-a-Loreto-y-b-Miguel-Diaz_fig3_334726382", media: "Fotografía (artículo científico)" },
+  { id: "colorada", name: "Caleta La Colorada", cat: "caleta", ll: [-70.5623, -24.6428], side: "r",
+    ubic: "Al norte del poblado de Paposo, a orillas del océano Pacífico.",
+    relato: ["Al norte del poblado de Paposo se encuentra Caleta La Colorada. Este sector forma parte del territorio ancestral del pueblo chango, cuyas comunidades habitaron la costa y desarrollaron una estrecha relación con el mar.",
+      "Mediante la pesca y la recolección de mariscos, los changos aprovecharon los recursos marinos para su subsistencia, construyendo una forma de vida ligada al entorno costero."],
+    fuente: "https://explora.cl/antofagasta/ultima-jornada-de-centinelas-del-medio-ambiente-se-realiza-en-ecosistemas-costeros-de-paposo/", media: "Fotografía" },
+  { id: "puntaplata", name: "Alero Punta de Plata", cat: "arq", ll: [-70.5747, -24.7226], side: "r", hierbas: true,
+    ubic: "Al norte de Paposo, a unos 200 metros de la línea de costa.",
+    relato: ["Al norte de Paposo se encuentra el Alero de Punta de Plata, un refugio natural a unos 200 metros de la costa. Este sitio arqueológico conserva pinturas rupestres y evidencias de ocupación humana prehispánica.",
+      "Es un testimonio del pasado de las comunidades costeras del pueblo chango y permite valorar su historia y patrimonio cultural."],
+    fuente: null },
+  { id: "loreto", name: "Caleta Loreto", cat: "caleta", ll: [-70.5458, -24.8104], side: "l", hierbas: true,
+    ubic: "Al norte de Paposo, junto al sitio Pictografías de Loreto.",
+    relato: ["Caleta Loreto forma parte del territorio ancestral del pueblo chango. En sus alrededores se encuentran las Pictografías de Loreto, antiguas pinturas sobre las rocas que representan una importante expresión artística de los habitantes del litoral.",
+      "Actualmente, la Comunidad Indígena Changa Loreto mantiene viva su identidad cultural y su conexión con el territorio, contribuyendo a preservar los conocimientos, las tradiciones y la historia del pueblo chango para las futuras generaciones."],
+    fuente: "https://hospitaltaltal.cl/salud-en-terreno-catastro-sociosanitario-en-sectores-costeros-de-paposo/", media: "Fotografía" },
+  { id: "medano", name: "El Médano", cat: "arq", ll: [-70.5360, -24.8492], side: "r", hierbas: true,
+    ubic: "Unos 20 km al norte de Paposo, en una quebrada de la cordillera de la Costa que baja al mar.",
+    relato: ["A unos 20 kilómetros al norte de Paposo se encuentra El Médano, una quebrada de la cordillera de la Costa que desciende hacia el océano Pacífico. Destaca por sus pinturas rupestres, que representan escenas de pesca, animales marinos y embarcaciones.",
+      "Estas expresiones permiten conocer la relación de las comunidades costeras con el mar, sus actividades de subsistencia y sus conocimientos sobre los recursos marinos, y constituyen un valioso patrimonio cultural del norte de Chile."],
+    fuente: "https://www.andeshandbook.org/senderismo/ruta/1945/quebrada_el_medano_", media: "Fotografía" },
+  { id: "rincon", name: "Caleta El Rincón", cat: "caleta", ll: [-70.5241, -24.9183], side: "l",
+    ubic: "En la desembocadura de la quebrada El Rincón, también conocida como Rinconada.",
+    relato: ["Al norte de Paposo se encuentra Caleta El Rincón, en la desembocadura de la quebrada El Rincón. Este lugar forma parte del territorio ancestral del pueblo chango, cuyas comunidades habitaron el litoral y desarrollaron actividades como la pesca y la recolección de mariscos.",
+      "Su importancia radica en que permite comprender cómo estas comunidades aprovecharon los recursos marinos y construyeron una forma de vida estrechamente relacionada con el océano Pacífico."],
+    fuente: null },
+  { id: "gaucho", name: "Caleta El Gaucho", cat: "caleta", ll: [-70.4810, -24.9612], side: "r",
+    ubic: "Unos 6 a 7 km al norte del poblado de Paposo.",
+    relato: ["A unos 6 o 7 kilómetros al norte de Paposo se encuentra Caleta El Gaucho. Este sector forma parte del territorio ancestral del pueblo chango, cuyas comunidades desarrollaron una estrecha relación con el mar mediante la pesca, la recolección de mariscos y el aprovechamiento de los recursos costeros.",
+      "Refleja la continuidad de las tradiciones y los conocimientos asociados a la vida en el litoral del norte de Chile."],
+    fuente: null },
+  { id: "paposo", name: "Paposo", cat: "paposo", ll: [-70.4653, -25.0094], side: "l",
+    ubic: "A 54 km al norte de Taltal, a orillas del océano Pacífico.",
+    relato: ["Caleta Paposo es un territorio ancestral del pueblo chango que destaca por su riqueza histórica, cultural y natural.",
+      "Sus habitantes han desarrollado tradicionalmente la pesca artesanal, la recolección de mariscos y algas, y la crianza de animales. La camanchaca favorece el crecimiento de una vegetación única en medio del desierto."],
+    fuente: "https://www.instagram.com/p/DIENaTaOVK3/", media: "Fotografía (Instagram)" },
+  { id: "guanillos", name: "Caleta Guanillos", sub: "Punta Negra", cat: "arq", ll: [-70.4814, -25.0443], side: "r",
+    ubic: "Al sur de Paposo. Habitado hace 5.800 a 4.600 años (período Arcaico Medio).",
+    relato: ["Punta Negra fue habitado por antiguas comunidades de pescadores, cazadores y recolectores que aprovechaban los recursos del océano Pacífico para sobrevivir en el desierto.",
+      "Sus vestigios permiten conocer herramientas, actividades cotidianas y formas de vida, y lo convierten en un importante testimonio de los antiguos pueblos costeros."],
+    fuente: null },
+  { id: "salitre", name: "Caleta Salitre", cat: "caleta", ll: [-70.4849, -25.0591], side: "l",
+    ubic: "Al sur de Paposo, cerca de Punta Grande y de la Rada de Paposo.",
+    relato: ["Caleta Salitre forma parte del paisaje del desierto costero, con playas, roqueríos y cerros muy cerca del mar.",
+      "Su entorno permite conocer la riqueza natural del litoral y la importancia que los recursos marinos han tenido para las comunidades costeras."],
+    fuente: null },
+  { id: "cachinales", name: "Caleta Cachinales", cat: "caleta", ll: [-70.4520, -25.1600], side: "l",
+    ubic: "Al sur de Paposo, cerca de Punta Grande. Incluye Cachinalito y la aguada Agua del Pueblo.",
+    relato: ["Cachinales forma parte del territorio históricamente habitado por familias del pueblo chango. En sectores como Cachinalito y la aguada Agua del Pueblo, las comunidades aprovecharon los recursos del mar y de la tierra mediante la pesca, la recolección de mariscos y la crianza de animales.",
+      "Refleja sus formas de vida, sus conocimientos ancestrales y la relación que han mantenido con el entorno costero del desierto de Atacama."],
+    fuente: "https://www.instagram.com/p/DH8fChjuYDA/", media: "Fotografía (Instagram)" },
+  { id: "bandurrias", name: "Caleta Bandurrias", cat: "caleta", ll: [-70.4351, -25.1933], side: "r",
+    ubic: "Unos 20 km al norte de Taltal, cerca de la desembocadura de la quebrada Bandurrias.",
+    relato: ["Esta bahía, rodeada de rocas y playas de arena, tiene islotes que sirven de refugio a lobos marinos y diversas aves costeras.",
+      "Conserva además evidencias de antiguos grupos humanos dedicados a la pesca, la caza y la recolección de recursos marinos."],
+    fuente: null },
+  { id: "humedal", name: "Quebrada y humedal", cat: "nat", ll: [-70.4470, -25.0150], side: "r", approx: true,
+    ubic: "Quebrada de Paposo, hacia el interior del poblado.",
+    relato: ["El humedal de Paposo es un pequeño ecosistema de agua dulce en medio del árido desierto de Atacama, que da refugio a distintas formas de vida.",
+      "Allí vive el caracol de Paposo, una especie endémica: habita naturalmente en un territorio muy reducido y está en riesgo de extinción. Este humedal nos recuerda la importancia de proteger el agua y la biodiversidad."],
+    fuente: null },
+  { id: "marina", name: "Flora y fauna marina", cat: "nat", ll: [-70.6250, -24.9300], side: "l", approx: true,
+    ubic: "Aguas y roqueríos del litoral de Paposo.",
+    relato: ["En las costas de Paposo crecen el huiro negro (Lessonia berteroana), que se adhiere a las rocas y resiste el golpe de las olas, y el huiro palo (Lessonia trabeculata), que forma bosques submarinos. Ambos dan refugio y alimento a muchos animales, y su recolección es una actividad económica importante vinculada a los saberes changos.",
+      "Entre los peces se encuentran el congrio, el jurel, el dorado y la cojinova, aprovechados por generaciones de pescadores artesanales. Proteger estas especies es conservar la biodiversidad y las tradiciones de Paposo."],
+    fuente: null }
+];
+
+const PAPOSO_TEMAS = [
+  { t: "Muelle de Paposo", g: "Patrimonio pesquero", extra: "Consumo responsable" },
+  { t: "Pesca y recolección", g: "Actividades económicas" },
+  { t: "Leyenda del Bichicuma", g: "Memoria oral" },
+  { t: "Escuela Paranal G-107", g: "Comunidad", body: ["Es el único establecimiento educacional rural de la localidad y caleta de Paposo."] },
+  { t: "Majadas Gutiérrez González", g: "Crianza de animales" },
+  { t: "Herramientas de pesca", g: "Saberes", tools: ["Chope", "Chinguillo", "Guatero", "Perra", "Pinche", "Tota"] },
+  { t: "Hito fronterizo", g: "Historia", body: ["En 1866, Chile y Bolivia firmaron un tratado que estableció el paralelo 24° de latitud sur como límite territorial. Este hito permite reconocer la importancia que adquirió el litoral del desierto de Atacama en la configuración de las fronteras del país."],
+    note: "En Paposo, OpenStreetMap registra el «Antiguo Límite Chile–Bolivia / Hito 25» (25° S). Falta definir con el equipo cómo se relaciona con el paralelo 24°." },
+  { t: "Posta de Paposo", g: "Comunidad" },
+  { t: "Quebrada: flora", g: "Patrimonio natural", list: ["Amancay (Balbisia peduncularis)", "Guata de lagarto (Polyachyrus spp.)", "Lechero (Euphorbia lactiflua)", "Malvilla (Cristaria spp.)", "Té de burro (Dinemandra ericoides, D. glaberrima)", "Monte negro (Heliotropium spp.)"] },
+  { t: "Quebrada: fauna", g: "Patrimonio natural" },
+  { t: "Camanchaca", g: "Patrimonio natural", body: ["Aunque Paposo está en una de las zonas más áridas del mundo, la camanchaca favorece el desarrollo de vegetación en sectores de las quebradas y laderas costeras."] }
+];
+
+const OAS = {
+  "1°": [["OA7","Describir características significativas del territorio ancestral del pueblo indígena que corresponda."],["OA8","Comprender la importancia de la memoria familiar de los pueblos indígenas en la transmisión del conocimiento y la cultura."],["OA9","Comprender que los pueblos indígenas poseen un territorio y una historia que le otorgan identidad."]],
+  "2°": [["OA6","Reconocer espacios significativos presentes en el territorio, valorando su importancia en la visión de mundo de cada pueblo."],["OA7","Conocer aspectos centrales de la historia de la comunidad o localidad, del pasado y del presente."],["OA8","Valorar diferentes aspectos de la cultura indígena como aporte a la identidad de personas y pueblos."],["OA9","Comprender aspectos de la cultura indígena (territorio, lengua e historia) que construyen identidad."]],
+  "3°": [["OA6","Comprender la interrelación entre el territorio y la vida espiritual, festividades y actividades productivas."],["OA7","Comprender aspectos centrales de la historia del pueblo indígena para su presente y futuro."],["OA8","Valorar que los pueblos indígenas poseen una cultura que enriquece la de su localidad y del país."]],
+  "4°": [["OA7","Comprender la organización del territorio ancestral y sus vínculos con el espacio natural y social."],["OA8","Describir aspectos históricos de la organización política y sociocomunitaria, con cambios y continuidades."],["OA9","Reflexionar sobre la identidad del pueblo indígena, comprendiendo que las identidades son dinámicas."]],
+  "5°": [["OA7","Reflexionar sobre la importancia del territorio para la visión de mundo y las identidades."],["OA8","Reflexionar sobre la historia de otros pueblos indígenas: elementos comunes y diferencias."],["OA9","Valorar la existencia de diferentes pueblos indígenas y sus lenguas, favoreciendo el diálogo intercultural."]],
+  "6°": [["OA7","Reflexionar sobre los procesos que han afectado el territorio de los pueblos indígenas y sus consecuencias."],["OA8","Valorar la memoria histórica de los pueblos indígenas para problematizar la historia nacional."],["OA9","Problematizar la relación entre cultura global, culturas indígenas y otras culturas, desde la interculturalidad."]]
+};
+
+const CAT_LABEL = { caleta: "Caleta", arq: "Sitio arqueológico", nat: "Patrimonio natural", paposo: "Localidad · centro del recorrido" };
+const ROUTE = PLACES.map(p => p.id);
+PLACES.forEach(p => Object.assign(p, utm(...p.ll)));
+
+// Sitios de significación cultural · Recorrido de orilla (Comunidad y Corporación Indígena Loreto)
+// n: norte UTM en km leído de la carta de la comunidad; ll: coordenada de OpenStreetMap cuando el lugar existe ahí; h: aparece en el mapa de hierbas medicinales
+const SITES = [
+  { id: "tataveliz", name: "Tata Véliz", n: 7281.5, side: "r" },
+  { id: "tambor", name: "El Tambor", n: 7281.0, side: "r" },
+  { id: "aguadavicuna", name: "Aguada de Vicuña", n: 7279.7, side: "r" },
+  { id: "vicuna", name: "Vicuña", ll: [-70.5536, -24.6055], side: "r" },
+  { id: "terteles", name: "Los Terteles", n: 7277.0, side: "l" },
+  { id: "tiburon", name: "La baja del tiburón", n: 7276.4, side: "r" },
+  { id: "coloradachica", name: "La Colorada Chica", n: 7273.0, side: "l" },
+  { id: "tortuga", name: "El Tortuga", n: 7272.2, side: "r" },
+  { id: "chuminga", name: "La Chuminga · El Erizo", n: 7268.5, side: "r", h: true },
+  { id: "piedrasbolas", name: "Piedras Bolas", n: 7266.7, side: "r" },
+  { id: "ranchomonte", name: "Rancho Monte", ll: [-70.5593, -24.7425], side: "r", h: true },
+  { id: "zorros", name: "Los Zorros", n: 7262.9, side: "r" },
+  { id: "panul", name: "Panul", ll: [-70.5521, -24.7651], side: "r", h: true },
+  { id: "lancha", name: "Lancha Varada", n: 7259.5, side: "r" },
+  { id: "juanito", name: "Juanito Jhon", n: 7258.4, side: "r" },
+  { id: "patos", name: "Los Patos", n: 7256.4, side: "l" },
+  { id: "barraza", name: "Barraza", n: 7255.6, side: "r" },
+  { id: "finao", name: "Finao Loreto", n: 7253.8, side: "l", h: true },
+  { id: "justino", name: "Justino", n: 7252.6, side: "r", h: true },
+  { id: "amarillos", name: "Los Amarillos", n: 7251.0, side: "r" },
+  { id: "perros", name: "Los Perros", n: 7249.6, side: "r" },
+  { id: "canas", name: "Las Cañas", n: 7247.6, side: "r", h: true },
+  { id: "perales", name: "Los Perales", ll: [-70.4560, -25.0250], side: "r", h: true, onlyHerbs: true }
+];
+const byId = id => PLACES.find(x => x.id === id) || SITES.find(x => x.id === id);
+
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("map");
+const el = (tag, attrs = {}, parent = svg) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// Geometría proyectada
+const CP = COAST.map(([lon, lat]) => utm(lon, lat));
+const coastAt = lat => { // x de la costa a una latitud
+  const y = utm(-70.5, lat).y;
+  let best = CP[0];
+  for (const p of CP) if (Math.abs(p.y - y) < Math.abs(best.y - y)) best = p;
+  return best.x;
+};
+const EXT = (() => {
+  const top = utm(-70.5, -23.95).y, bot = utm(-70.5, -25.44).y;
+  const xs = CP.filter(p => p.y >= top && p.y <= bot).map(p => p.x);
+  return { x0: Math.min(...xs) - 14, x1: Math.max(...xs) + 14, y0: top, y1: bot };
+})();
+
+const layers = {};
+const screenItems = []; // elementos de tamaño constante en pantalla: {g, x, y, label, prio}
+const mountains = [];
+
+function build() {
+  const defs = el("defs");
+  const lg = el("linearGradient", { id: "land", gradientUnits: "userSpaceOnUse", x1: EXT.x1 + 60, y1: EXT.y0, x2: EXT.x0, y2: EXT.y1 }, defs);
+  el("stop", { offset: "0", "stop-color": "#efb98f" }, lg);
+  el("stop", { offset: ".45", "stop-color": "#f6e8d7" }, lg);
+  el("stop", { offset: "1", "stop-color": "#f3e2cf" }, lg);
+
+  const far = 600, xs = CP.map(p => p.x), ys = CP.map(p => p.y);
+  el("rect", { x: EXT.x0 - far, y: EXT.y0 - far, width: 2 * far + EXT.x1 - EXT.x0, height: 2 * far + EXT.y1 - EXT.y0, fill: "#33a6c0" });
+  const shore = dx => {
+    const pts = CP.map(p => `${(p.x - dx).toFixed(3)} ${p.y.toFixed(3)}`);
+    const first = CP[0], last = CP[CP.length - 1];
+    return `M${(first.x - dx).toFixed(2)} ${first.y + far} L${pts.join(" L")} L${(last.x - dx).toFixed(2)} ${last.y - far} L${EXT.x1 + far} ${last.y - far} L${EXT.x1 + far} ${first.y + far}Z`;
+  };
+  [[7, "#69c4d3"], [3.2, "#a8dde2"], [1.1, "#e3f4f1"]].forEach(([d, fill]) => el("path", { d: shore(d), fill }));
+  el("path", { d: shore(0), fill: "url(#land)", stroke: "rgba(31,42,48,.35)", "stroke-width": 1, "vector-effect": "non-scaling-stroke" });
+
+  // Retícula UTM cada 6 km, como en las cartas de la Comunidad Loreto
+  const grid = el("g", { stroke: "rgba(31,42,48,.13)", "stroke-width": 1, "vector-effect": "non-scaling-stroke" });
+  for (let E = 300; E <= 420; E += 6) el("line", { x1: E, y1: EXT.y0 - far, x2: E, y2: EXT.y1 + far, "vector-effect": "non-scaling-stroke" }, grid);
+  for (let N = 7170; N <= 7400; N += 6) { const y = 7400 - N; el("line", { x1: EXT.x0 - far, y1: y, x2: EXT.x1 + far, y2: y, "vector-effect": "non-scaling-stroke" }, grid); }
+
+  // Cordillera de la Costa: crece con el zoom, pero con tope en pantalla
+  for (let lat = -24.12; lat >= -25.36; lat -= 0.085) {
+    const y = utm(-70.5, lat).y, x = coastAt(lat) + 7.5 + 1.2 * Math.sin(lat * 90);
+    const g = el("g", { "aria-hidden": "true" });
+    el("path", { d: "M-17 0 L-5 -17 L1 -9 L6 -14 L17 0Z", fill: "#6b2326", opacity: .9 }, g);
+    el("path", { d: "M-5 -17 L-3 0 L-9 0Z", fill: "rgba(255,255,255,.1)" }, g);
+    mountains.push({ g, x, y });
+  }
+
+  // Quebrada de Paposo
+  const q0 = utm(-70.4672, -25.0094), q1 = utm(-70.4300, -25.0230);
+  let qd = `M${q0.x} ${q0.y}`;
+  for (let i = 1; i <= 30; i++) { const t = i / 30; qd += ` L${q0.x + (q1.x - q0.x) * t} ${q0.y + (q1.y - q0.y) * t + .18 * Math.sin(t * 20)}`; }
+  el("path", { d: qd, fill: "none", stroke: "#1f2a30", "stroke-width": 1.6, "vector-effect": "non-scaling-stroke", "stroke-linecap": "round" });
+
+  // Límites históricos
+  const limit = (lat, text, prio, tema) => {
+    const y = utm(-70.5, lat).y;
+    el("line", { x1: EXT.x0 - far, y1: y, x2: EXT.x1 + far, y2: y, stroke: "#4f181b", "stroke-width": 1.4, "stroke-dasharray": "6 5", "vector-effect": "non-scaling-stroke" });
+    const g = el("g", { class: "pin", tabindex: 0, role: "button", "aria-label": text });
+    const t = el("text", { x: 0, y: 15, class: "label", style: "font-size:11.5px;letter-spacing:.08em" }, g);
+    t.textContent = text;
+    on(g, () => openTema(PAPOSO_TEMAS.find(x => x.t === "Hito fronterizo")));
+    screenItems.push({ g, x: coastAt(lat) + 9, y, label: t, prio });
+  };
+  limit(-24.0, "PARALELO 24° S · TRATADO DE 1866", 40);
+  limit(-25.0, "HITO 25 · ANTIGUO LÍMITE", 90);
+
+  // Textos de orientación
+  const deco = (text, x, y, fill, prio) => {
+    const g = el("g");
+    const t = el("text", { "text-anchor": "middle", class: "deco label", fill, style: `fill:${fill}` }, g);
+    t.textContent = text;
+    screenItems.push({ g, x, y, label: t, prio });
+  };
+  deco("OCÉANO PACÍFICO", coastAt(-24.45) - 12, utm(-70.5, -24.45).y, "#1b5f78", 95);
+  deco("CORDILLERA DE LA COSTA", coastAt(-25.25) + 15, utm(-70.5, -25.25).y, "#6b2326", 96);
+
+  // Ciudades
+  const city = (name, lon, lat, arrow) => {
+    const p = utm(lon, lat), g = el("g");
+    if (arrow) el("path", { d: "M0 -12 6 -2 2 -2 2 8 -2 8 -2 -2 -6 -2Z", fill: "#1f2a30" }, g);
+    else el("path", { d: "M0-8 2.4-2.5 8.5-2.5 3.6 1.4 5.4 7.6 0 4 -5.4 7.6 -3.6 1.4 -8.5-2.5 -2.4-2.5Z", fill: "#fbf5ec", stroke: "#1f2a30", "stroke-width": 1.5 }, g);
+    const t = el("text", { x: 13, y: 6, class: "label", style: "font-size:19px;font-weight:700;letter-spacing:.02em" }, g);
+    t.textContent = name;
+    screenItems.push({ g, x: p.x, y: p.y, label: t, prio: 5 });
+  };
+  city("ANTOFAGASTA", -70.505, -23.965, true);
+  city("TALTAL", -70.4858, -25.4078);
+
+  // Capa Comunidad Loreto: ruta de orilla y sitios
+  const layer = el("g", { id: "siteLayer" });
+  const coastAtY = y => {
+    for (let i = 0; i < CP.length - 1; i++) {
+      const a = CP[i], b = CP[i + 1];
+      if (a.y >= y && b.y <= y) return a.x + (b.x - a.x) * (a.y - y) / (a.y - b.y || 1);
+    }
+    return CP[0].x;
+  };
+  SITES.forEach(s => {
+    if (s.ll) Object.assign(s, utm(...s.ll));
+    else { s.y = 7400 - s.n; s.x = coastAtY(s.y) + 0.2; s.E = s.x * 1000; s.N = s.n * 1000; }
+  });
+  const yA = utm(-70.566, -24.570).y, yB = 7400 - 7247.6;
+  const routePts = CP.filter(p => p.y >= yA && p.y <= yB).sort((a, b) => a.y - b.y);
+  el("path", { d: "M" + routePts.map(p => `${(p.x + .25).toFixed(3)} ${p.y.toFixed(3)}`).join(" L"), fill: "none", stroke: "#b5d36a", "stroke-width": 3.2, "stroke-dasharray": "1 4.5", "stroke-linecap": "round", "vector-effect": "non-scaling-stroke" }, layer);
+  SITES.forEach((s, i) => {
+    const g = el("g", { class: "pin site", tabindex: 0, role: "button", "data-id": s.id, "aria-label": `${s.name}, sitio de la Comunidad Loreto` }, layer);
+    el("circle", { r: 14, fill: "transparent" }, g);
+    el("circle", { r: 10, class: "halo" }, g);
+    el("path", { d: "M0 -6 6 5 -6 5Z", fill: "#c2405e", stroke: "#fff", "stroke-width": 1.4, class: "mk" }, g);
+    if (s.h) el("path", { d: "M-1 -4 C-1 -10 4 -12 9 -12 C9 -7 6 -3 -1 -4Z", fill: "#7fb07a", stroke: "#fff", "stroke-width": 1.1 }, g);
+    const right = s.side === "r";
+    const t = el("text", { x: right ? 11 : -11, y: 4.5, "text-anchor": right ? "start" : "end", class: "label" }, g);
+    t.textContent = s.name;
+    on(g, () => selectSite(s.id, true));
+    s.g = g;
+    screenItems.push({ g, x: s.x, y: s.y, label: t, prio: 60 + i, id: s.id, layer: true });
+  });
+
+  // Lugares
+  PLACES.forEach((p, i) => {
+    const g = el("g", { class: "pin", tabindex: 0, role: "button", "data-id": p.id, "aria-label": `${p.name}, ${CAT_LABEL[p.cat]}` });
+    el("circle", { r: 18, fill: "transparent" }, g);
+    el("circle", { r: 13, class: "halo" }, g);
+    if (p.cat === "caleta") {
+      const m = el("g", { class: "mk" }, g);
+      el("circle", { r: 6.5, fill: "#fff", stroke: "#3a76b3", "stroke-width": 1.6 }, m);
+      el("circle", { r: 3, fill: "#3a76b3" }, m);
+    } else if (p.cat === "arq") {
+      el("rect", { x: -5, y: -5, width: 10, height: 10, transform: "rotate(45)", fill: "#6b2326", stroke: "#fff", "stroke-width": 1.6, class: "mk" }, g);
+    } else if (p.cat === "nat") {
+      el("circle", { r: 6.5, fill: "#557f52", stroke: "#fff", "stroke-width": 1.8, class: "mk" }, g);
+    } else {
+      el("circle", { r: 9, class: "pulse" }, g);
+      el("circle", { r: 9, fill: "#d9a441", stroke: "#fff", "stroke-width": 2, class: "mk" }, g);
+    }
+    const right = p.side === "r";
+    const t = el("text", { x: right ? 14 : -14, y: 5, "text-anchor": right ? "start" : "end", class: "label" }, g);
+    t.textContent = p.name;
+    if (p.sub) { const s = el("tspan", { style: "font-size:.75em;font-weight:400" }, t); s.textContent = ` (${p.sub})`; }
+    if (p.cat === "paposo") t.setAttribute("style", "font-size:21px;font-weight:700");
+    on(g, () => select(p.id, true));
+    p.g = g;
+    screenItems.push({ g, x: p.x, y: p.y, label: t, prio: p.cat === "paposo" ? 1 : 10 + i, id: p.id });
+  });
+}
+
+// Click/Enter que ignora el arrastre del mapa
+let dragMoved = false;
+function on(g, fn) {
+  g.addEventListener("click", e => { if (dragMoved) { e.preventDefault(); return; } fn(); });
+  g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } });
+}
+
+/* ---------- Vista: zoom y desplazamiento ---------- */
+const card = document.getElementById("mapCard");
+let size = { w: 1, h: 1 }, view = { cx: 0, cy: 0, h: 100 }, anim = null;
+const fitH = () => Math.max(EXT.y1 - EXT.y0, (EXT.x1 - EXT.x0) * size.h / size.w) * 1.02;
+const MIN_H = 4;
+
+function clampView(v) {
+  const h = Math.min(Math.max(v.h, MIN_H), fitH());
+  const w = h * size.w / size.h;
+  const padX = Math.max(0, (EXT.x1 - EXT.x0 - w) / 2), padY = Math.max(0, (EXT.y1 - EXT.y0 - h) / 2);
+  const mx = (EXT.x0 + EXT.x1) / 2, my = (EXT.y0 + EXT.y1) / 2;
+  return { h, cx: Math.min(mx + padX, Math.max(mx - padX, v.cx)), cy: Math.min(my + padY, Math.max(my - padY, v.cy)) };
+}
+
+let labelTimer = 0;
+function apply() {
+  const w = view.h * size.w / size.h;
+  svg.setAttribute("viewBox", `${view.cx - w / 2} ${view.cy - view.h / 2} ${w} ${view.h}`);
+  const s = view.h / size.h;
+  for (const it of screenItems) it.g.setAttribute("transform", `translate(${it.x} ${it.y}) scale(${s})`);
+  const mk = s * Math.min(46, Math.max(18, 5.5 / s)) / 34; // ~5,5 km de ancho, entre 18 y 46 px
+  for (const m of mountains) m.g.setAttribute("transform", `translate(${m.x} ${m.y}) scale(${mk})`);
+  updateScale(s);
+  cancelAnimationFrame(labelTimer);
+  labelTimer = requestAnimationFrame(declutter);
+}
+
+// Oculta etiquetas que chocan, dejando primero las más importantes
+function declutter() {
+  const items = screenItems.slice().sort((a, b) => prio(a) - prio(b));
+  const placed = [], layerOff = !siteToggle.checked;
+  for (const it of items) {
+    if (it.layer && layerOff) continue;
+    it.label.classList.remove("hide");
+    const r = it.label.getBoundingClientRect();
+    const hit = placed.some(q => r.left < q.right + 3 && r.right > q.left - 3 && r.top < q.bottom + 1 && r.bottom > q.top - 1);
+    if (hit) it.label.classList.add("hide"); else placed.push(r);
+  }
+}
+const prio = it => (it.id && it.id === current) ? 0 : it.prio;
+
+function updateScale(kmPerPx) {
+  const target = kmPerPx * 90, steps = [0.5, 1, 2, 5, 10, 20, 50];
+  const km = steps.reduce((b, v) => Math.abs(v - target) < Math.abs(b - target) ? v : b, steps[0]);
+  document.getElementById("scaleBar").style.width = (km / kmPerPx).toFixed(0) + "px";
+  document.getElementById("scaleTxt").textContent = (km < 1 ? km * 1000 + " m" : km + " km");
+}
+
+function flyTo(target, ms = 650) {
+  target = clampView(target);
+  cancelAnimationFrame(anim);
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) ms = 0;
+  const from = { ...view }, t0 = performance.now();
+  const lf = Math.log(from.h), lt = Math.log(target.h);
+  const step = now => {
+    const k = ms ? Math.min(1, (now - t0) / ms) : 1, e = k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+    view = { cx: from.cx + (target.cx - from.cx) * e, cy: from.cy + (target.cy - from.cy) * e, h: Math.exp(lf + (lt - lf) * e) };
+    apply();
+    if (k < 1) anim = requestAnimationFrame(step);
+  };
+  anim = requestAnimationFrame(step);
+}
+const fitAll = ms => flyTo({ cx: (EXT.x0 + EXT.x1) / 2, cy: (EXT.y0 + EXT.y1) / 2, h: fitH() }, ms);
+const toMap = (px, py) => {
+  const b = svg.getBoundingClientRect(), s = view.h / size.h;
+  return { x: view.cx + (px - b.left - size.w / 2) * s, y: view.cy + (py - b.top - size.h / 2) * s };
+};
+function zoomAt(factor, px, py) {
+  const m = toMap(px, py), h = view.h * factor;
+  const nh = clampView({ ...view, h }).h, k = nh / view.h;
+  view = clampView({ h: nh, cx: m.x + (view.cx - m.x) * k, cy: m.y + (view.cy - m.y) * k });
+  apply();
+}
+
+// Mouse, dedo y lápiz: arrastrar para mover, pellizcar o rueda para acercar
+const pointers = new Map();
+let pinch = null, downAt = null;
+svg.addEventListener("pointerdown", e => {
+  cancelAnimationFrame(anim);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) { downAt = { x: e.clientX, y: e.clientY }; dragMoved = false; }
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), h: view.h };
+  }
+});
+svg.addEventListener("pointermove", e => {
+  if (!pointers.has(e.pointerId)) return;
+  const prev = pointers.get(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2 && pinch) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    zoomAt((pinch.h * pinch.d / d) / view.h, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    dragMoved = true;
+    return;
+  }
+  if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6 && !dragMoved) {
+    dragMoved = true; svg.classList.add("dragging"); svg.setPointerCapture(e.pointerId);
+  }
+  if (dragMoved) {
+    const s = view.h / size.h;
+    view = clampView({ ...view, cx: view.cx - (e.clientX - prev.x) * s, cy: view.cy - (e.clientY - prev.y) * s });
+    apply();
+  }
+});
+const up = e => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch = null;
+  if (!pointers.size) { svg.classList.remove("dragging"); setTimeout(() => { dragMoved = false; }, 0); }
+};
+["pointerup", "pointercancel", "pointerleave"].forEach(t => svg.addEventListener(t, up));
+svg.addEventListener("wheel", e => { e.preventDefault(); zoomAt(Math.exp(e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
+svg.addEventListener("dblclick", e => zoomAt(0.5, e.clientX, e.clientY));
+
+const center = () => { const b = svg.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; };
+document.getElementById("zoomIn").addEventListener("click", () => flyTo({ ...view, h: view.h / 2 }, 300));
+document.getElementById("zoomOut").addEventListener("click", () => flyTo({ ...view, h: view.h * 2 }, 300));
+
+new ResizeObserver(() => {
+  const b = svg.getBoundingClientRect();
+  if (!b.width || !b.height) return;
+  const first = size.w === 1;
+  size = { w: b.width, h: b.height };
+  if (first) view = clampView({ cx: (EXT.x0 + EXT.x1) / 2, cy: (EXT.y0 + EXT.y1) / 2, h: fitH() });
+  else view = clampView(view);
+  apply();
+}).observe(svg);
+
+/* ---------- Ficha ---------- */
+const panel = document.getElementById("panel");
+const peek = document.getElementById("peek");
+const small = () => matchMedia("(max-width: 1023px)").matches;
+let current = null;
+
+const photoBox = p => p.media
+  ? `<div class="photo"><div><strong>${esc(p.media)}</strong>Recurso identificado en la fuente · falta obtener permiso y archivo</div></div>`
+  : `<div class="photo"><div><strong>Sin fotografía</strong>No se encontró registro · se propone ilustración</div></div>`;
+const fmt = n => Math.round(n).toLocaleString("es-CL");
+const dms = (v, h) => { const a = Math.abs(v), d = Math.floor(a), m = (a - d) * 60; return `${d}°${m.toFixed(1).replace(".", ",")}′ ${h}`; };
+
+function mark() {
+  svg.querySelectorAll(".pin[data-id]").forEach(g => g.classList.toggle("on", g.dataset.id === current));
+  const p = byId(current);
+  peek.classList.toggle("show", !!p);
+  if (p) document.getElementById("peekName").innerHTML = `${esc(p.name)}<small>${p.cat ? CAT_LABEL[p.cat] : "Sitio Comunidad Loreto"}</small>`;
+  declutter();
+}
+
+const siteToggle = document.getElementById("siteToggle");
+siteToggle.addEventListener("change", () => {
+  document.getElementById("siteLayer").classList.toggle("off", !siteToggle.checked);
+  if (!siteToggle.checked && SITES.some(s => s.id === current)) intro();
+  declutter();
+});
+
+function selectSite(id, fly) {
+  const s = SITES.find(x => x.id === id);
+  current = id; mark();
+  if (fly) flyTo({ cx: s.x, cy: s.y, h: Math.min(view.h, 9) });
+  const list = SITES.filter(x => !x.onlyHerbs), i = list.indexOf(s);
+  const prev = list[i - 1], next = list[i + 1];
+  panel.innerHTML = `
+    <div class="panel-head">
+      <div class="eyebrow">Sitio de significación cultural${s.onlyHerbs ? "" : ` <span>· ${i + 1} de ${list.length} en la orilla</span>`}${s.ll ? "" : `<span class="tag approx">ubicación aproximada</span>`}</div>
+      <h2>${esc(s.name)}</h2>
+    </div>
+    <div class="panel-body">
+      <div class="photo"><div><strong>Sin fotografía</strong>Por registrar junto a la comunidad</div></div>
+      <div><h3>¿Qué es?</h3>
+        <p>${s.onlyHerbs ? "Lugar" : "Punto del recorrido de orilla"} registrado por la Comunidad y Corporación Indígena Loreto en su cartografía de ${s.onlyHerbs ? "hierbas medicinales" : "sitios de significación cultural"}.</p>
+        ${s.h ? `<p><span class="tag leaf">Hierbas medicinales</span> ${s.onlyHerbs ? "" : "También aparece en el mapa de ubicación de hierbas medicinales de la comunidad."}</p>` : ""}
+        <p class="coords">UTM 19S ${fmt(s.E)} E · ${fmt(s.N)} N${s.ll ? ` &nbsp;|&nbsp; ${dms(s.ll[1], "S")} · ${dms(s.ll[0], "O")}` : " (leído de la carta de la comunidad)"}</p></div>
+      <div><h3>Relato</h3><p><span class="tag pend">Pendiente</span> Historia, uso y significado del lugar, a completar con la comunidad.</p></div>
+      <div class="panel-nav">
+        ${prev ? `<button class="btn" data-site="${prev.id}">↑ ${esc(prev.name)}</button>` : `<span></span>`}
+        ${next ? `<button class="btn solid" data-site="${next.id}">${esc(next.name)} ↓</button>` : `<button class="btn solid" data-home>Ver toda la costa</button>`}
+      </div>
+    </div>`;
+  panel.querySelectorAll("[data-site]").forEach(b => b.addEventListener("click", () => { selectSite(b.dataset.site, true); if (small()) card.scrollIntoView({ behavior: "smooth", block: "start" }); }));
+  panel.querySelector("[data-home]")?.addEventListener("click", home);
+  panel.scrollTop = 0;
+}
+
+function intro() {
+  current = null; mark();
+  panel.innerHTML = `
+    <div class="panel-head"><div class="eyebrow">Recurso Pedagógico Digital · 1° a 6° básico</div><h2>Paposo: un territorio de historia, cultura y patrimonio</h2></div>
+    <div class="panel-body">
+      <p>Paposo está en la comuna de Taltal, donde el desierto de Atacama se encuentra con el océano Pacífico. Sus quebradas, cerros, playas y caletas han acompañado la vida del pueblo chango a lo largo del tiempo.</p>
+      <p>Recorre la costa de norte a sur y toca cada punto del mapa para conocer su historia. Puedes arrastrar el mapa y acercarte con los botones, la rueda del mouse o pellizcando la pantalla.</p>
+      <div><h3>En este recorrido</h3><p>${ROUTE.length} lugares en ${Math.round(PLACES.find(p => p.id === "cobre").y - PLACES.find(p => p.id === "bandurrias").y) * -1} km de costa · ${PAPOSO_TEMAS.length} temas en Paposo</p></div>
+      <div class="panel-nav"><span></span><button class="btn solid" data-go="cobre">Comenzar por el norte ↓</button></div>
+    </div>`;
+  panel.querySelector("[data-go]").addEventListener("click", () => select("cobre", true));
+}
+
+function select(id, fly) {
+  const p = PLACES.find(x => x.id === id);
+  current = id; mark();
+  if (fly) flyTo({ cx: p.x, cy: p.y, h: Math.min(view.h, p.cat === "paposo" ? 16 : 24) });
+  const i = ROUTE.indexOf(id);
+  const prev = PLACES[i - 1], next = PLACES[i + 1];
+  panel.innerHTML = `
+    <div class="panel-head">
+      <div class="eyebrow">${CAT_LABEL[p.cat]} <span>· parada ${i + 1} de ${ROUTE.length}</span>${p.approx ? `<span class="tag approx">ubicación aproximada</span>` : ""}${p.hierbas ? `<span class="tag leaf">hierbas medicinales</span>` : ""}</div>
+      <h2>${esc(p.name)}</h2>
+    </div>
+    <div class="panel-body">
+      ${photoBox(p)}
+      <div><h3>¿Dónde está?</h3><p>${esc(p.ubic)}</p>
+        <p class="coords">${dms(p.ll[1], "S")} · ${dms(p.ll[0], "O")} &nbsp;|&nbsp; UTM 19S ${fmt(p.E)} E · ${fmt(p.N)} N</p></div>
+      <div><h3>Relato</h3>${p.relato.map(r => `<p>${esc(r)}</p>`).join("")}</div>
+      ${p.id === "paposo" ? `<div><h3>Explora Paposo</h3><div class="chips">${PAPOSO_TEMAS.map((t, k) => `
+        <button class="chip" data-tema="${k}"><span class="eyebrow">${esc(t.g)}</span><b>${esc(t.t)}</b>
+        ${t.body || t.list ? `<span class="tag ok">Con texto</span>` : `<span class="tag pend">Texto pendiente</span>`}</button>`).join("")}</div></div>` : ""}
+      ${p.fuente ? `<div class="src"><h3>Fuente</h3><a href="${p.fuente}" target="_blank" rel="noopener">${esc(p.fuente.replace(/^https?:\/\/(www\.)?/, "").slice(0, 60))}…</a></div>` : ""}
+      <div class="panel-nav">
+        ${prev ? `<button class="btn" data-go="${prev.id}">↑ ${esc(prev.name)}</button>` : `<span></span>`}
+        ${next ? `<button class="btn solid" data-go="${next.id}">${esc(next.name)} ↓</button>` : `<button class="btn solid" data-home>Fin del recorrido</button>`}
+      </div>
+    </div>`;
+  panel.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => { select(b.dataset.go, true); if (small()) card.scrollIntoView({ behavior: "smooth", block: "start" }); }));
+  panel.querySelector("[data-home]")?.addEventListener("click", home);
+  panel.querySelectorAll("[data-tema]").forEach(b => b.addEventListener("click", () => openTema(PAPOSO_TEMAS[+b.dataset.tema])));
+  panel.scrollTop = 0;
+}
+
+function openTema(t) {
+  const p = PLACES.find(x => x.id === "paposo");
+  current = "paposo"; mark();
+  flyTo({ cx: p.x, cy: p.y, h: Math.min(view.h, 16) });
+  let content;
+  if (t.tools) content = `<div class="tools">${t.tools.map(n => `<div class="tool"><div class="photo">Imagen pendiente</div><b>${n}</b></div>`).join("")}</div><p><span class="tag pend">Descripción de cada herramienta pendiente</span></p>`;
+  else if (t.list) content = `<ul class="plain">${t.list.map(n => `<li>${esc(n)}</li>`).join("")}</ul><p><span class="tag pend">Falta descripción y fotos por especie</span></p>`;
+  else if (t.body) content = t.body.map(b => `<p>${esc(b)}</p>`).join("") + (t.note ? `<p><span class="tag pend">Por revisar</span> ${esc(t.note)}</p>` : "");
+  else content = `<div class="photo"><div><strong>Contenido pendiente</strong>El guion tiene el título${t.extra ? ` y el subtema “${esc(t.extra)}”` : ""}, pero falta relato e imagen</div></div>`;
+  panel.innerHTML = `
+    <div class="panel-head"><div class="eyebrow">Paposo · ${esc(t.g)}</div><h2>${esc(t.t)}</h2></div>
+    <div class="panel-body">${content}
+      <div class="panel-nav"><button class="btn" data-back>← Volver a Paposo</button><span></span></div>
+    </div>`;
+  panel.querySelector("[data-back]").addEventListener("click", () => select("paposo"));
+  panel.scrollTop = 0;
+  if (small()) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function step(d) {
+  const i = current ? ROUTE.indexOf(current) : -1;
+  select(ROUTE[Math.min(ROUTE.length - 1, Math.max(0, i + d))], true);
+}
+function home() { intro(); fitAll(); }
+
+document.getElementById("peekBtn").addEventListener("click", () => panel.scrollIntoView({ behavior: "smooth", block: "start" }));
+document.getElementById("start").addEventListener("click", () => select("cobre", true));
+document.getElementById("homeBtn").addEventListener("click", home);
+document.getElementById("prevBtn").addEventListener("click", () => step(-1));
+document.getElementById("nextBtn").addEventListener("click", () => step(1));
+svg.addEventListener("keydown", e => {
+  const s = view.h / size.h * 60, k = { ArrowLeft: [-s, 0], ArrowRight: [s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] }[e.key];
+  if (k && e.target === svg) { e.preventDefault(); view = clampView({ ...view, cx: view.cx + k[0], cy: view.cy + k[1] }); apply(); }
+  if (e.key === "+" || e.key === "=") flyTo({ ...view, h: view.h / 2 }, 250);
+  if (e.key === "-") flyTo({ ...view, h: view.h * 2 }, 250);
+});
+svg.setAttribute("tabindex", "0");
+
+// Simbología abierta solo en pantallas grandes
+if (!small()) document.getElementById("legend").open = true;
+
+// Guía docente
+const levels = document.querySelector(".levels"), oas = document.getElementById("oas");
+function showLevel(l) {
+  levels.querySelectorAll(".lvl").forEach(b => b.setAttribute("aria-pressed", b.dataset.l === l));
+  oas.innerHTML = OAS[l].map(([k, v]) => `<li><b>${k}</b><span>${esc(v)}</span></li>`).join("");
+}
+Object.keys(OAS).forEach(l => {
+  const b = document.createElement("button");
+  b.className = "lvl"; b.dataset.l = l; b.textContent = `${l} básico`;
+  b.addEventListener("click", () => showLevel(l));
+  levels.appendChild(b);
+});
+showLevel("1°");
+const guideBtn = document.getElementById("guideBtn"), guide = document.getElementById("guide");
+guideBtn.addEventListener("click", () => {
+  guide.hidden = !guide.hidden;
+  guideBtn.setAttribute("aria-expanded", !guide.hidden);
+  if (!guide.hidden) guide.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+build();
+intro();
+</script>
+</body>
+</html>
