@@ -419,7 +419,7 @@ const PLACES = [
     relato: ["El humedal de Paposo es un pequeño ecosistema de agua dulce en medio del árido desierto de Atacama, que da refugio a distintas formas de vida.",
       "Allí vive el caracol de Paposo, una especie endémica: habita naturalmente en un territorio muy reducido y está en riesgo de extinción. Este humedal nos recuerda la importancia de proteger el agua y la biodiversidad."],
     fuente: null },
-  { id: "marina", name: "Flora y fauna marina", cat: "nat", ll: [-70.6250, -24.9300], side: "l", approx: true,
+  { id: "marina", name: "Flora y fauna marina", cat: "nat", ll: [-70.6700, -24.8700], side: "l", approx: true,
     ubic: "Aguas y roqueríos del litoral de Paposo.",
     relato: ["En las costas de Paposo crecen el huiro negro (Lessonia berteroana), que se adhiere a las rocas y resiste el golpe de las olas, y el huiro palo (Lessonia trabeculata), que forma bosques submarinos. Ambos dan refugio y alimento a muchos animales, y su recolección es una actividad económica importante vinculada a los saberes changos.",
       "Entre los peces se encuentran el congrio, el jurel, el dorado y la cojinova, aprovechados por generaciones de pescadores artesanales. Proteger estas especies es conservar la biodiversidad y las tradiciones de Paposo."],
@@ -675,7 +675,7 @@ function declutter() {
   const items = screenItems.slice().sort((a, b) => prio(a) - prio(b));
   const placed = [], layerOff = !siteToggle.checked;
   for (const it of items) {
-    if (it.layer && layerOff) continue;
+    if (it.layer && (layerOff || (view.h > 45 && it.id !== current))) { it.label.classList.add("hide"); continue; }
     it.label.classList.remove("hide");
     const r = it.label.getBoundingClientRect();
     const hit = placed.some(q => r.left < q.right + 3 && r.right > q.left - 3 && r.top < q.bottom + 1 && r.bottom > q.top - 1);
