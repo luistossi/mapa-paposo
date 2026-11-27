@@ -45,20 +45,39 @@ button, a, summary, .pin.live { cursor: var(--cur-hover, pointer); }
 button:disabled { cursor: var(--cur, default); }
 
 /* ---------- Portada ---------- */
-.portada { position: relative; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: clamp(16px, 4vw, 48px); overflow: hidden; isolation: isolate; }
-.portada-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
-.portada-card { position: relative; width: min(100%, 52rem); background: rgba(251, 245, 236, .93); border-radius: 24px; box-shadow: 0 18px 50px rgba(0,0,0,.35); padding: clamp(20px, 4vw, 44px); display: grid; gap: 1rem; text-align: center; justify-items: center; }
-.portada-card .sound-btn { position: absolute; top: 12px; right: 12px; }
-.kicker { margin: 0; font-family: var(--font-display); letter-spacing: .14em; text-transform: uppercase; font-size: .9rem; color: var(--maroon); }
-.rupestre { margin: 0; font-family: var(--font-display); font-weight: 700; text-transform: uppercase; color: var(--ochre); line-height: .95; letter-spacing: .04em; font-size: clamp(2.6rem, 9vw, 5.4rem); filter: url(#rough); text-wrap: balance; }
-.rupestre span { display: block; font-size: .5em; letter-spacing: .12em; color: var(--maroon); margin-top: .25em; }
-.pictos { width: min(100%, 30rem); height: auto; filter: url(#rough); }
-.subtitle { margin: 0; font-size: clamp(1.05rem, 2.4vw, 1.3rem); color: var(--ink-soft); max-width: 40ch; text-wrap: balance; }
-.portada-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; margin-top: .5rem; }
-.portada-nav .btn { width: 100%; min-height: 56px; font-size: 1.15rem; border-radius: var(--radius); padding: 10px 16px; }
-.portada-nav .btn.primary { grid-column: 1 / -1; font-size: 1.35rem; min-height: 64px; }
-.draft { margin: 0; font-size: .85rem; color: var(--ink-soft); }
-@media (max-width: 600px) { .portada-nav { grid-template-columns: minmax(0, 1fr); } .portada-card { padding-top: 64px; } }
+.portada { position: relative; min-height: 100vh; min-height: 100dvh; overflow: hidden; isolation: isolate; background: #c9ccd0; }
+.portada-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%; z-index: -2; }
+/* velo claro detrás del título para que se lea sobre las nubes */
+.portada::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse 60% 48% at 50% 26%, rgba(255,255,255,.55), rgba(255,255,255,0) 72%); }
+.portada-inner { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; text-align: center; gap: clamp(6px, 1.2vh, 14px); padding: clamp(18px, 3.5vh, 40px) max(16px, env(safe-area-inset-right, 0px)) clamp(20px, 4.5vh, 48px) max(16px, env(safe-area-inset-left, 0px)); }
+.portada .sound-btn { position: absolute; top: clamp(12px, 2.5vh, 24px); right: clamp(12px, 2.5vw, 28px); background: rgba(255,255,255,.55); z-index: 2; }
+.portada .sound-btn[aria-pressed="true"] { background: var(--sage); }
+.portada-birds { position: absolute; top: 19%; right: 8%; width: clamp(90px, 15vw, 250px); height: auto; color: #2a2a2a; opacity: .85; pointer-events: none; }
+.kicker { margin: 0; display: flex; align-items: center; gap: 1rem; font-family: var(--font-display); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; font-size: clamp(.8rem, 1.6vw, 1.2rem); color: var(--maroon-deep); }
+.kicker::before, .kicker::after { content: ""; width: clamp(24px, 5vw, 80px); height: 2px; background: var(--ochre); }
+.rupestre { margin: 0; font-family: var(--font-display); font-weight: 700; text-transform: uppercase; color: var(--ochre); line-height: .92; letter-spacing: .03em; font-size: clamp(3.4rem, min(11vw, 13vh), 8.5rem); filter: url(#rough); text-shadow: 0 0 24px rgba(255,255,255,.55); }
+.rupestre .l { display: block; }
+.rupestre .sub2 { display: block; font-size: .5em; letter-spacing: .1em; color: var(--maroon-deep); margin-top: .22em; }
+.pictos { width: min(100%, 34rem); height: auto; filter: url(#rough); }
+.subtitle { margin: 0; font-size: clamp(1.05rem, 1.9vw, 1.45rem); font-weight: 700; color: #262d2f; max-width: 34ch; text-wrap: balance; text-shadow: 0 0 14px rgba(255,255,255,.95), 0 0 6px rgba(255,255,255,.95), 0 0 2px #fff; }
+.portada-nav { margin-top: auto; padding-top: 16px; width: min(100%, 66rem); display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(10px, 1.6vw, 22px); }
+.portada-nav .btn { font-family: var(--font-display); font-weight: 500; line-height: 1.15; }
+.nav-break { flex-basis: 100%; height: 0; }
+.portada-nav .btn.primary { flex: 0 1 40rem; min-height: clamp(60px, 9vh, 84px); font-size: clamp(1.5rem, 3vw, 2.4rem); border-radius: 26px; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 8px 24px rgba(0,0,0,.35); gap: 18px; }
+.portada-nav .btn.primary .go { width: 1.3em; height: 1.3em; border-radius: 50%; background: #fff; color: var(--maroon); display: grid; place-items: center; flex: none; }
+.portada-nav .btn.primary:hover { background: var(--maroon-deep); }
+.portada-nav .btn.pill { min-height: clamp(64px, 9.5vh, 92px); padding: 10px 26px; font-size: clamp(1.05rem, 1.6vw, 1.4rem); border-radius: 22px; background: rgba(248, 233, 219, .95); color: var(--maroon); box-shadow: 0 6px 18px rgba(0,0,0,.28); gap: 14px; }
+.portada-nav .btn.pill svg { width: clamp(34px, 3.6vw, 50px); height: auto; flex: none; }
+.portada-nav .btn.pill:hover { background: var(--maroon); color: #fff; }
+@media (max-width: 1100px) { .portada-birds { display: none; } }
+@media (max-width: 700px) {
+  .portada-inner { padding-top: 70px; }
+  .kicker { font-size: .78rem; letter-spacing: .06em; }
+  .kicker::before, .kicker::after { display: none; }
+  .portada-nav .btn.pill { flex: 1 1 100%; justify-content: flex-start; text-align: left; padding: 8px 18px; min-height: 58px; }
+  .portada-nav .btn.pill br { display: none; }
+}
+@media (max-height: 560px) and (orientation: landscape) { .pictos, .portada-birds { display: none; } }
 
 /* ---------- Botones ---------- */
 .btn { font-family: var(--font-display); font-weight: 500; font-size: 1.05rem; letter-spacing: .02em; border: 2px solid var(--maroon); color: var(--maroon); background: #fff; border-radius: 999px; padding: 8px 18px; min-height: var(--tap); display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
@@ -390,29 +409,12 @@ figcaption .code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospa
 
 <!-- ================= PORTADA ================= -->
 <section class="portada" id="portada" aria-labelledby="portadaTitle">
-  <svg class="portada-bg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <defs>
-      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1c19d"/><stop offset="1" stop-color="#f6e8d7"/></linearGradient>
-      <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#69c4d3"/><stop offset="1" stop-color="#33a6c0"/></linearGradient>
-    </defs>
-    <rect width="1440" height="900" fill="url(#sky)"/>
-    <circle cx="1130" cy="190" r="90" fill="#f6d4b8" opacity=".9"/>
-    <path d="M0 470 L160 380 260 430 420 300 560 400 700 330 860 420 1010 310 1160 400 1300 330 1440 390 V900 H0Z" fill="#d99a74" opacity=".55"/>
-    <path d="M0 540 L200 450 330 510 520 420 700 500 880 430 1060 520 1240 450 1440 500 V900 H0Z" fill="#c97b57" opacity=".55"/>
-    <path d="M0 610 C300 570 600 600 900 580 C1100 568 1300 590 1440 600 V900 H0Z" fill="#f6e8d7"/>
-    <path d="M0 680 C260 650 520 690 760 668 C1000 646 1240 676 1440 664 V900 H0Z" fill="url(#sea)"/>
-    <path d="M0 720 C260 700 520 735 760 712 C1000 690 1240 722 1440 708" fill="none" stroke="#e3f4f1" stroke-width="5" opacity=".7"/>
-    <path d="M0 790 C260 770 520 805 760 782 C1000 760 1240 792 1440 778" fill="none" stroke="#a8dde2" stroke-width="4" opacity=".7"/>
-    <g color="#a8432f" opacity=".32" filter="url(#rough)">
-      <use href="#pg-balsa" x="60" y="190" width="200" height="100"/>
-      <use href="#pg-whale" x="1180" y="520" width="200" height="86"/>
-      <use href="#pg-guanaco" x="1200" y="250" width="80" height="80"/><use href="#pg-guanaco" x="1270" y="262" width="66" height="66"/><use href="#pg-hunter" x="1130" y="250" width="54" height="80"/>
-    </g>
-  </svg>
-  <div class="portada-card">
-    <button class="icon-btn sound-btn" aria-pressed="false" aria-label="Activar sonido del mar" title="Sonido del mar"><svg width="24" height="24" aria-hidden="true"><use href="#i-mega"/></svg></button>
+  <img class="portada-bg" src="img/ilustracion-paposo-mar.webp" alt="" fetchpriority="high">
+  <svg class="portada-birds" viewBox="0 0 250 50" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22.8 18.4q3.6-2.4 7.2 3.6q3.6-6.0 7.2-3.6"/><path d="M44.2 10.1q3.9-2.6 7.8 3.9q3.9-6.5 7.8-3.9"/><path d="M66.0 19.0q3.0-2.0 6.0 3.0q3.0-5.0 6.0-3.0"/><path d="M87.8 8.4q3.6-2.4 7.2 3.6q3.6-6.0 7.2-3.6"/><path d="M111.4 16.7q3.3-2.2 6.6 3.3q3.3-5.5 6.6-3.3"/><path d="M132.2 5.1q3.9-2.6 7.8 3.9q3.9-6.5 7.8-3.9"/><path d="M154.0 15.0q3.0-2.0 6.0 3.0q3.0-5.0 6.0-3.0"/><path d="M174.8 6.4q3.6-2.4 7.2 3.6q3.6-6.0 7.2-3.6"/><path d="M199.0 13.0q3.0-2.0 6.0 3.0q3.0-5.0 6.0-3.0"/><path d="M221.4 4.7q3.3-2.2 6.6 3.3q3.3-5.5 6.6-3.3"/><path d="M235.2 19.6q2.4-1.6 4.8 2.4q2.4-4.0 4.8-2.4"/><path d="M34.6 31.3q2.7-1.8 5.4 2.7q2.7-4.5 5.4-2.7"/><path d="M82.6 27.3q2.7-1.8 5.4 2.7q2.7-4.5 5.4-2.7"/><path d="M125.2 27.6q2.4-1.6 4.8 2.4q2.4-4.0 4.8-2.4"/><path d="M166.6 25.3q2.7-1.8 5.4 2.7q2.7-4.5 5.4-2.7"/><path d="M209.2 23.6q2.4-1.6 4.8 2.4q2.4-4.0 4.8-2.4"/></g></svg>
+  <button class="icon-btn sound-btn" aria-pressed="false" aria-label="Activar sonido del mar" title="Sonido del mar"><svg width="24" height="24" aria-hidden="true"><use href="#i-mega"/></svg></button>
+  <div class="portada-inner">
     <p class="kicker">Recurso Pedagógico Digital · 1° a 6° básico</p>
-    <h1 class="rupestre" id="portadaTitle">Huellas Changas:<span>Descubriendo Paposo</span></h1>
+    <h1 class="rupestre" id="portadaTitle"><span class="l">Huellas</span> <span class="l">Changas:</span> <span class="sub2">Descubriendo Paposo</span></h1>
     <svg class="pictos" viewBox="0 0 480 70" aria-hidden="true">
       <g fill="none" stroke="#a8432f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M10 38q22-16 44 0q-22 16-44 0M54 38l12-10v20Z"/>
@@ -425,12 +427,12 @@ figcaption .code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospa
     </svg>
     <p class="subtitle">Lugares significativos del pueblo chango · Comuna de Taltal, Región de Antofagasta</p>
     <nav class="portada-nav" aria-label="Menú principal">
-      <button class="btn primary" id="start">Iniciar recorrido</button>
-      <button class="btn" data-open="sugDlg">Sugerencias pedagógicas e instrucciones de uso</button>
-      <button class="btn" data-open="fuentesDlg">Fuentes bibliográficas</button>
-      <button class="btn" data-open="creditosDlg">Créditos</button>
+      <button class="btn primary" id="start">Iniciar recorrido <span class="go" aria-hidden="true"><svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+      <span class="nav-break" aria-hidden="true"></span>
+      <button class="btn pill" data-open="sugDlg"><svg viewBox="0 0 48 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 9c-5-3-12-4-19-3v26c7-1 14 0 19 3 5-3 12-4 19-3V6c-7-1-14 0-19 3Z"/><path d="M24 9v26M9 13h10M9 18h10M9 23h10M29 13h10M29 18h10M29 23h10"/></svg><span>Sugerencias pedagógicas<br> e instrucciones de uso</span></button>
+      <button class="btn pill" data-open="fuentesDlg"><svg viewBox="0 0 48 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 30l18 6 18-6M6 24l18 6 18-6"/><path d="M6 18l18-6 18 6-18 6Z"/><path d="M6 18v6M42 18v6M6 24v6M42 24v6"/></svg><span>Fuentes<br> bibliográficas</span></button>
+      <button class="btn pill" data-open="creditosDlg"><svg viewBox="0 0 48 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="13" r="6"/><path d="M13 35c0-7 5-11 11-11s11 4 11 11"/><circle cx="10" cy="17" r="4.5"/><path d="M3 34c0-5 3-8 7.5-8"/><circle cx="38" cy="17" r="4.5"/><path d="M45 34c0-5-3-8-7.5-8"/></svg><span>Créditos</span></button>
     </nav>
-    <p class="draft">Portada provisoria · la imagen definitiva de la portada será entregada más adelante.</p>
   </div>
 </section>
 

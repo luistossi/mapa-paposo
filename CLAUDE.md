@@ -36,7 +36,7 @@ Contexto para sesiones de Claude que trabajen en este repositorio.
 1. **Portada** (`#portada`):
    - Título «rupestre» (filtro SVG `#rough`).
    - Botones: Iniciar recorrido, Sugerencias pedagógicas, Fuentes y Créditos.
-   - La imagen de portada es provisoria; la definitiva la entrega el equipo.
+   - Diseño final según la maqueta del equipo: HTML y CSS sobre `img/ilustracion-paposo-mar.webp` (sin texto incrustado), con bandada de pájaros en SVG (se oculta bajo 1100 px) y botones en `.portada-nav` (`.btn.primary` y `.btn.pill`).
 2. **Recorrido** (`#recorrido`, oculto al inicio):
    - Header con: Inicio, ¿Sabías qué?, Guía docente y sonido del mar.
    - `.stage` con el mapa (`#mapView`) y un panel lateral plegable (`#panel`), que se puede minimizar o cerrar y reabrir con `#panelOpen`.
@@ -157,7 +157,6 @@ Se hizo con Playwright y Chrome headless, en tamaños 1400×900, 1900×1300, 256
 
 ## Pendientes conocidos
 
-- Imagen definitiva de la portada.
 - Texto de la leyenda «La isla encantada».
 - Ficha de Panul.
 - Decidir qué hacer con `maqueta.html` y las 15 imágenes sin uso.
