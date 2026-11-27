@@ -49,8 +49,9 @@ Contexto para sesiones de Claude que trabajen en este repositorio.
    - Tienen trampa de foco, se cierran con Escape o con clic fuera, y devuelven el foco al botón que las abrió (`opener`).
    - Las imágenes se amplían con un lightbox (`.lightbox`) dentro del dialog.
 4. **Paposo ilustrado** (`#ilus`):
-   - Capa encima del mapa con una «moneda» 3D de dos caras: `ilustracion-paposo-cerro.webp` y `-mar.webp`, que se giran con `setCoin`.
-   - La cara del cerro tiene zonas clicables (`ZONAS`, en % de la imagen) que abren fichas.
+   - Capa a pantalla completa (`position: fixed`, `body.ilus-open`) con una «moneda» 3D de dos caras: `ilustracion-paposo-cerro.webp` y `-mar.webp`, que se giran con `setCoin`. En pantallas apaisadas la ilustración se estira para llenar el espacio (`object-fit: fill`); las zonas en % siguen calzando.
+   - Zonas clicables con brillo burdeo que late: `ZONAS` en la cara del cerro (cancha, posta, hito, escuela, muelle, población) y `ZONAS_MAR` en la cara del mar (camanchaca y quebrada de Paposo). Se crean con `addZona`.
+   - La portada NO usa `object-fit: fill` (se decidió mantenerla sin estirar).
 
 ## Mapa (todo en el `<script>`)
 
@@ -98,14 +99,15 @@ Contexto para sesiones de Claude que trabajen en este repositorio.
   - `id`, `name`, `cat`, `E`, `N`, `icon`, `media[]`, `relato[]` (párrafos);
   - opcionales: `sub`, `secciones[]` (`{ h, p[], media, cuento, autor, glosario, cita }`), `fold` (secciones como acordeón), `sabias` (clave de `SABIAS`), `dibujos`, `stories`, `explora` (chips de temas de Paposo), `temas`, `big`, `color`.
 - `TEMAS`: fichas de la caleta (escuela, muelle, posta, hito, cancha, actividades, fauna, camanchaca) y temas de apoyo:
-  - `herramientas`: comparadores antes/ahora (`TOOLS`);
+  - `herramientas`: comparadores antes/ahora (`TOOLS`: chope, anzuelo, perra, pesa de red y guatero) y tarjetas (chinguillo, pinche, tota);
   - `floramed`: tarjetas de flora medicinal, que se muestran en la posta.
+  - La fauna marina también se agrega como sección del muelle.
   - `PAPOSO_TEMAS` define los chips que se muestran en la ficha de Paposo.
 - `VILLAGE`: pines de la caleta, que solo se ven con mucho zoom.
 - `SIN_FICHA`: lugares grises sin ficha (Panul, y El Cobre y Blanco Encalada como referencias).
 - `SITIOS`: puntos de significación cultural de la Comunidad Loreto, como `[nombre, E, N]`.
 - `SABIAS`: curiosidades, ligadas a un `lugar` o a un `tema`.
-- `STORIES`: leyendas sueltas. «La isla encantada» tiene el texto **[PENDIENTE]**.
+- `STORIES`: leyendas sueltas. «La isla encantada» (`ISLA_ENCANTADA`, tradición oral) sale con ilustración en Paposo (`islaenc`) y solo con texto en La Playita (`islaencTexto`).
 - `KEYS`: palabras que se destacan en burdeo la primera vez que aparecen. El formato de la clave es exacto y tiene que coincidir con los títulos:
   - `"<id>"`
   - `"<id>/<título de sección>"`
@@ -116,7 +118,7 @@ Contexto para sesiones de Claude que trabajen en este repositorio.
 - `OAS`: objetivos de aprendizaje transcritos textualmente del guion. **No editarlos.**
 - `CATS` y `CAT_EYEBROW`: categorías, íconos (`<symbol id="i-*">` en el sprite) y colores.
 - Helpers:
-  - `foto(archivo, alt, cap)`;
+  - `foto(archivo, alt, cap, extra)`; los pies de foto solo se muestran en dibujos (`code`) o con `showCap: true`;
   - `fuente(archivo, alt, origen)`;
   - `dib(CÓDIGO)` → dibujo infantil.
 
@@ -157,7 +159,6 @@ Se hizo con Playwright y Chrome headless, en tamaños 1400×900, 1900×1300, 256
 
 ## Pendientes conocidos
 
-- Texto de la leyenda «La isla encantada».
 - Ficha de Panul.
 - Decidir qué hacer con `maqueta.html` y las 15 imágenes sin uso.
 - Con el zoom mínimo actual, en pantallas anchas no se ve el mapa completo de norte a sur (se ven unos 113 de los 150 km). Hay que arrastrar el mapa para llegar al paralelo 24° S.
