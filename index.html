@@ -1114,7 +1114,8 @@ function fitTo(Ea, Eb, Na, Nb, pad = 30) {
 }
 // encuadre que se adapta a la forma de la pantalla: en pantallas angostas se prioriza el alto del recorrido
 const fitRoute = () => { const r = mapView.getBoundingClientRect(); if (r.width / r.height < .75) fitTo(336, 360, 7286, 7220, 14); else fitTo(334, 362, 7287, 7219); };
-function computeKMin() { const r = mapView.getBoundingClientRect(); if (r.width) K_MIN = Math.min(r.width / WW, r.height / WH) * .98; }
+// zoom mínimo: el mapa siempre cubre todo el recuadro, para que no se vea el fondo a los lados
+function computeKMin() { const r = mapView.getBoundingClientRect(); if (r.width) K_MIN = Math.max(r.width / WW, r.height / WH); }
 
 let anim = null;
 function flyTo(cx, cy, k, ms = 450) {
